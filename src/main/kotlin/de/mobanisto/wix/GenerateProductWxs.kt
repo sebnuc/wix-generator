@@ -100,6 +100,18 @@ class GenerateProductWxs(
                         setAttribute("Value", "$vendor.$name")
                     }
                 }
+                createChild("RemoveFolder", "CleanupShortcut") {
+                    setAttribute("Directory", "ApplicationProgramsFolder")
+                    setAttribute("On", "uninstall")
+                }
+                createChild("RegistryValue") {
+                    setAttribute("Root", "HKCU")
+                    setAttribute("Key", "Software\\$vendor\\$name")
+                    setAttribute("Name", "installed")
+                    setAttribute("Type", "integer")
+                    setAttribute("Value", "1")
+                    setAttribute("KeyPath", "yes")
+                }
             }
         }
         product.createChild("Feature", "MainFeature") {
