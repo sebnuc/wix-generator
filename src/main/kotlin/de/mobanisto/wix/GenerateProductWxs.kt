@@ -121,16 +121,6 @@ class GenerateProductWxs(
         product.createChild("Property", "WIXUI_INSTALLDIR") {
             setAttribute("Value", "INSTALLDIR")
         }
-        product.createChild("UI", "InstallUI") {
-            createChild("UIRef", "WixUI_InstallDir")
-            /*createChild("Publish") {
-                setAttribute("Dialog", "WelcomeDlg")
-                setAttribute("Control", "Next")
-                setAttribute("Event", "NewDialog")
-                setAttribute("Value", "InstallDirDlg")
-                setAttribute("Order", "6")
-            }*/
-        }
         product.createChild("UIRef", "InstallUI")
 
         product.createChild("Icon", iconId) {
