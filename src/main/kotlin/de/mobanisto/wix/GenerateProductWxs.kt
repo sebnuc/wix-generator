@@ -13,7 +13,6 @@ import javax.xml.transform.stream.StreamResult
 import kotlin.io.path.ExperimentalPathApi
 
 class GenerateProductWxs(
-        private val dir: Path,
         private val output: Path,
         private val upgradeCode: String,
         private val vendor: String,

@@ -17,7 +17,7 @@ import kotlin.io.path.ExperimentalPathApi
 import kotlin.io.path.name
 import kotlin.io.path.visitFileTree
 
-class GenerateFilesWxs(private val dir: Path, private val output: Path) {
+class GenerateFilesWxs(private val output: Path, private val dir: Path, private val defaultDirectoryName: String) {
 
     fun execute(): List<FileEntry> {
         val documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder()
@@ -47,7 +47,7 @@ class GenerateFilesWxs(private val dir: Path, private val output: Path) {
         val targetDir = fragment.createChild("DirectoryRef", "TARGETDIR")
         val programFiles = targetDir.createChild("Directory", "ProgramFiles64Folder")
         val installDir = programFiles.createChild("Directory", "INSTALLDIR") {
-            setAttribute("Name", "Hello World")
+            setAttribute("Name", defaultDirectoryName)
         }
         val fileEntries = buildFileTree(installDir, dir)
 

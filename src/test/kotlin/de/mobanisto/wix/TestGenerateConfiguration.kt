@@ -16,7 +16,7 @@ fun main() {
     println("dir: $dir")
     println("output files: $outputFiles")
     println("output product: $outputProduct")
-    val executables = GenerateFilesWxs(dir, outputFiles).execute()
-    val mainExecutable = executables.get(0)
-    GenerateProductWxs(dir, outputProduct, upgradeCode, vendor, productName, version, description, mainExecutable).execute()
+    val executables = GenerateFilesWxs(outputFiles, dir, productName).execute()
+    val mainExecutable = executables[0]
+    GenerateProductWxs(outputProduct, upgradeCode, vendor, productName, version, description, mainExecutable).execute()
 }
