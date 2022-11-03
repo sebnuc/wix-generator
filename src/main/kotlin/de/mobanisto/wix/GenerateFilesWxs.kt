@@ -14,15 +14,16 @@ import javax.xml.transform.TransformerFactory
 import javax.xml.transform.dom.DOMSource
 import javax.xml.transform.stream.StreamResult
 import kotlin.io.path.ExperimentalPathApi
+import kotlin.io.path.name
 import kotlin.io.path.visitFileTree
 
 class GenerateFilesWxs(private val dir: Path, private val output: Path) {
 
-    fun execute() {
+    fun execute(): List<FileEntry> {
         val documentBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder()
         val doc = documentBuilder.newDocument()
 
-        createDocument(doc, dir)
+        val executables = createDocument(doc, dir)
 
         val transformerFactory = TransformerFactory.newInstance()
         val transformer = transformerFactory.newTransformer()
@@ -33,10 +34,11 @@ class GenerateFilesWxs(private val dir: Path, private val output: Path) {
             val result = StreamResult(it)
             transformer.transform(source, result)
         }
+
+        return executables
     }
 
-    @OptIn(ExperimentalPathApi::class)
-    private fun createDocument(doc: Document, dir: Path) {
+    private fun createDocument(doc: Document, dir: Path): List<FileEntry> {
         val wix = doc.createElement("Wix").apply {
             setAttribute("xmlns", "http://schemas.microsoft.com/wix/2006/wi")
             doc.appendChild(this)
@@ -44,24 +46,32 @@ class GenerateFilesWxs(private val dir: Path, private val output: Path) {
         val fragment = wix.createChild("Fragment", "FragmentFiles")
         val targetDir = fragment.createChild("DirectoryRef", "TARGETDIR")
         val programFiles = targetDir.createChild("Directory", "ProgramFiles64Folder")
-        val installDir = programFiles.createChild("Directory", "INSTALLDIR").apply {
+        val installDir = programFiles.createChild("Directory", "INSTALLDIR") {
             setAttribute("Name", "Hello World")
         }
-        val ids = buildFileTree(installDir, dir)
+        val fileEntries = buildFileTree(installDir, dir)
 
         val componentGroup = fragment.createChild("ComponentGroup", "Files")
-        for (id in ids) {
-            componentGroup.createChild("ComponentRef", id)
+        for (fileEntry in fileEntries) {
+            componentGroup.createChild("ComponentRef", fileEntry.id)
         }
+        val executables = mutableListOf<FileEntry>()
+        for (fileEntry in fileEntries) {
+            val file = fileEntry.file
+            if (file.nameCount == 1 && file.name.endsWith(".exe")) {
+                executables.add(fileEntry)
+            }
+        }
+        return executables
     }
 
     @OptIn(ExperimentalPathApi::class)
-    private fun buildFileTree(installDir: Element, dir: Path): List<String> {
+    private fun buildFileTree(installDir: Element, dir: Path): List<FileEntry> {
         val stack = Stack<Element>()
         stack.push(installDir)
         var current = dir
         var fileId = 1
-        val list: MutableList<String> = ArrayList()
+        val list = mutableListOf<FileEntry>()
         dir.visitFileTree {
             onPreVisitDirectory { directory, _ ->
                 val relative = current.relativize(directory)
@@ -71,7 +81,7 @@ class GenerateFilesWxs(private val dir: Path, private val output: Path) {
                 val indent = "  ".repeat(stack.size - 1)
                 println("${indent}directory: $relative")
                 val uuid = UUID.randomUUID()
-                stack.peek().createChild("Directory", fileId(uuid)).apply {
+                stack.peek().createChild("Directory", fileIdFromUUID(uuid)) {
                     setAttribute("Name", relative.toString())
                     stack.push(this)
                 }
@@ -98,12 +108,13 @@ class GenerateFilesWxs(private val dir: Path, private val output: Path) {
                 val indent = "  ".repeat(stack.size - 1)
                 println("${indent}file: $relative")
                 val id = "File${fileId++}"
-                list.add(id)
                 val uuid = UUID.randomUUID()
-                val component = stack.peek().createChild("Component", id).apply {
+                val fileId = fileIdFromUUID(uuid)
+                list.add(FileEntry(id, relativeToDir, fileId))
+                val component = stack.peek().createChild("Component", id) {
                     setAttribute("Guid", "{$uuid}")
                 }
-                component.createChild("File", fileId(uuid)).apply {
+                component.createChild("File", fileId ) {
                     setAttribute("KeyPath", "yes")
                     setAttribute("Source", file.toString())
                 }
@@ -113,19 +124,9 @@ class GenerateFilesWxs(private val dir: Path, private val output: Path) {
         return list
     }
 
-    private fun fileId(uuid: UUID): String {
+    private fun fileIdFromUUID(uuid: UUID): String {
         return "file" + uuid.toString().replace("-", "")
     }
 
-    private fun Element.createChild(tagName: String, id: String): Element {
-        val fragment = createChild(tagName).apply {
-            setAttribute("Id", id)
-        }
-        return appendChild(fragment) as Element
-    }
-
-    private fun Element.createChild(tagName: String): Element {
-        val fragment = ownerDocument.createElement(tagName)
-        return appendChild(fragment) as Element
-    }
+    data class FileEntry(internal val id: String, internal val file: Path, internal val fileId: String)
 }
